@@ -102,65 +102,63 @@ public class DccFileTransfer {
      * Receive the file in a new thread.
      */
     void doReceive(final File file, final boolean resume) {
-        new Thread() {
-            public void run() {
+        new Thread(() -> {
 
-                BufferedOutputStream foutput = null;
-                Exception exception = null;
+            BufferedOutputStream foutput = null;
+            Exception exception = null;
 
-                try {
+            try {
 
-                    // Convert the integer address to a proper IP address.
-                    int[] ip = Utils.longToIp(_address);
-                    String ipStr = ip[0] + "." + ip[1] + "." + ip[2] + "." + ip[3];
+                // Convert the integer address to a proper IP address.
+                int[] ip = Utils.longToIp(_address);
+                String ipStr = ip[0] + "." + ip[1] + "." + ip[2] + "." + ip[3];
 
-                    // Connect the socket and set a timeout.
-                    _socket = new Socket(ipStr, _port);
-                    _socket.setSoTimeout(30*1000);
-                    _startTime = System.currentTimeMillis();
+                // Connect the socket and set a timeout.
+                _socket = new Socket(ipStr, _port);
+                _socket.setSoTimeout(30*1000);
+                _startTime = System.currentTimeMillis();
 
-                    // No longer possible to resume this transfer once it's underway.
-                    _manager.removeAwaitingResume(DccFileTransfer.this);
+                // No longer possible to resume this transfer once it's underway.
+                _manager.removeAwaitingResume(DccFileTransfer.this);
 
-                    BufferedInputStream input = new BufferedInputStream(_socket.getInputStream());
-                    BufferedOutputStream output = new BufferedOutputStream(_socket.getOutputStream());
+                BufferedInputStream input = new BufferedInputStream(_socket.getInputStream());
+                BufferedOutputStream output = new BufferedOutputStream(_socket.getOutputStream());
 
-                    // Following line fixed for jdk 1.1 compatibility.
-                    foutput = new BufferedOutputStream(new FileOutputStream(file.getCanonicalPath(), resume));
+                // Following line fixed for jdk 1.1 compatibility.
+                foutput = new BufferedOutputStream(new FileOutputStream(file.getCanonicalPath(), resume));
 
-                    byte[] inBuffer = new byte[BUFFER_SIZE];
-                    byte[] outBuffer = new byte[4];
-                    int bytesRead = 0;
-                    while ((bytesRead = input.read(inBuffer, 0, inBuffer.length)) != -1) {
-                        foutput.write(inBuffer, 0, bytesRead);
-                        _progress += bytesRead;
-                        // Send back an acknowledgement of how many bytes we have got so far.
-                        outBuffer[0] = (byte) ((_progress >> 24) & 0xff);
-                        outBuffer[1] = (byte) ((_progress >> 16) & 0xff);
-                        outBuffer[2] = (byte) ((_progress >> 8) & 0xff);
-                        outBuffer[3] = (byte) ((_progress >> 0) & 0xff);
-                        output.write(outBuffer);
-                        output.flush();
-                        delay();
-                    }
-                    foutput.flush();
+                byte[] inBuffer = new byte[BUFFER_SIZE];
+                byte[] outBuffer = new byte[4];
+                int bytesRead = 0;
+                while ((bytesRead = input.read(inBuffer, 0, inBuffer.length)) != -1) {
+                    foutput.write(inBuffer, 0, bytesRead);
+                    _progress += bytesRead;
+                    // Send back an acknowledgement of how many bytes we have got so far.
+                    outBuffer[0] = (byte) ((_progress >> 24) & 0xff);
+                    outBuffer[1] = (byte) ((_progress >> 16) & 0xff);
+                    outBuffer[2] = (byte) ((_progress >> 8) & 0xff);
+                    outBuffer[3] = (byte) ((_progress >> 0) & 0xff);
+                    output.write(outBuffer);
+                    output.flush();
+                    delay();
                 }
-                catch (Exception e) {
-                    exception = e;
-                }
-                finally {
-                    try {
-                        foutput.close();
-                        _socket.close();
-                    }
-                    catch (Exception anye) {
-                        // Do nothing.
-                    }
-                }
-
-                _bot.getEventHandler().onFileTransferFinished(DccFileTransfer.this, exception);
+                foutput.flush();
             }
-        }.start();
+            catch (Exception e) {
+                exception = e;
+            }
+            finally {
+                try {
+                    foutput.close();
+                    _socket.close();
+                }
+                catch (Exception anye) {
+                    // Do nothing.
+                }
+            }
+
+            _bot.getEventHandler().onFileTransferFinished(DccFileTransfer.this, exception);
+        }).start();
     }
 
 
@@ -168,111 +166,109 @@ public class DccFileTransfer {
      * Method to send the file inside a new thread.
      */
     void doSend(final boolean allowResume) {
-        new Thread() {
-            public void run() {
+        new Thread(() -> {
 
-                BufferedInputStream finput = null;
-                Exception exception = null;
+            BufferedInputStream finput = null;
+            Exception exception = null;
 
+            try {
+
+                ServerSocket ss = null;
+
+                int[] ports = _bot.getDccPorts();
+                if (ports == null) {
+                    // Use any free port.
+                    ss = new ServerSocket(0);
+                }
+                else {
+                    for (int i = 0; i < ports.length; i++) {
+                        try {
+                            ss = new ServerSocket(ports[i]);
+                            // Found a port number we could use.
+                            break;
+                        }
+                        catch (Exception e) {
+                            // Do nothing; go round and try another port.
+                        }
+                    }
+                    if (ss == null) {
+                        // No ports could be used.
+                        throw new IOException("All ports returned by getDccPorts() are in use.");
+                    }
+                }
+
+                ss.setSoTimeout(_timeout);
+                _port = ss.getLocalPort();
+                InetAddress inetAddress = _bot.getDccInetAddress();
+                if (inetAddress == null) {
+                    inetAddress = _bot.getInetAddress();
+                }
+                byte[] ip = inetAddress.getAddress();
+                long ipNum = Utils.ipToLong(ip);
+
+                // Rename the filename so it has no whitespace in it when we send it.
+                // .... I really should do this a bit more nicely at some point ....
+                String safeFilename = _file.getName().replace(' ', '_');
+                safeFilename = safeFilename.replace('\t', '_');
+
+                if (allowResume) {
+                    _manager.addAwaitingResume(DccFileTransfer.this);
+                }
+
+                // Send the message to the user, telling them where to connect to in order to get the file.
+                _bot.sendCTCPCommand(_nick, "DCC SEND " + safeFilename + " " + ipNum + " " + _port + " " + _file.length());
+
+                // The client may now connect to us and download the file.
+                _socket = ss.accept();
+                _socket.setSoTimeout(30000);
+                _startTime = System.currentTimeMillis();
+
+                // No longer possible to resume this transfer once it's underway.
+                if (allowResume) {
+                    _manager.removeAwaitingResume(DccFileTransfer.this);
+                }
+
+                // Might as well close the server socket now; it's finished with.
+                ss.close();
+
+                BufferedOutputStream output = new BufferedOutputStream(_socket.getOutputStream());
+                BufferedInputStream input = new BufferedInputStream(_socket.getInputStream());
+                finput = new BufferedInputStream(new FileInputStream(_file));
+
+                // Check for resuming.
+                if (_progress > 0) {
+                    long bytesSkipped = 0;
+                    while (bytesSkipped < _progress) {
+                        bytesSkipped += finput.skip(_progress - bytesSkipped);
+                    }
+                }
+
+                byte[] outBuffer = new byte[BUFFER_SIZE];
+                byte[] inBuffer = new byte[4];
+                int bytesRead = 0;
+                while ((bytesRead = finput.read(outBuffer, 0, outBuffer.length)) != -1) {
+                    output.write(outBuffer, 0, bytesRead);
+                    output.flush();
+                    input.read(inBuffer, 0, inBuffer.length);
+                    _progress += bytesRead;
+                    delay();
+                }
+            }
+            catch (Exception e) {
+                exception = e;
+            }
+            finally {
                 try {
-
-                    ServerSocket ss = null;
-
-                    int[] ports = _bot.getDccPorts();
-                    if (ports == null) {
-                        // Use any free port.
-                        ss = new ServerSocket(0);
-                    }
-                    else {
-                        for (int i = 0; i < ports.length; i++) {
-                            try {
-                                ss = new ServerSocket(ports[i]);
-                                // Found a port number we could use.
-                                break;
-                            }
-                            catch (Exception e) {
-                                // Do nothing; go round and try another port.
-                            }
-                        }
-                        if (ss == null) {
-                            // No ports could be used.
-                            throw new IOException("All ports returned by getDccPorts() are in use.");
-                        }
-                    }
-
-                    ss.setSoTimeout(_timeout);
-                    _port = ss.getLocalPort();
-                    InetAddress inetAddress = _bot.getDccInetAddress();
-                    if (inetAddress == null) {
-                        inetAddress = _bot.getInetAddress();
-                    }
-                    byte[] ip = inetAddress.getAddress();
-                    long ipNum = Utils.ipToLong(ip);
-
-                    // Rename the filename so it has no whitespace in it when we send it.
-                    // .... I really should do this a bit more nicely at some point ....
-                    String safeFilename = _file.getName().replace(' ', '_');
-                    safeFilename = safeFilename.replace('\t', '_');
-
-                    if (allowResume) {
-                        _manager.addAwaitingResume(DccFileTransfer.this);
-                    }
-
-                    // Send the message to the user, telling them where to connect to in order to get the file.
-                    _bot.sendCTCPCommand(_nick, "DCC SEND " + safeFilename + " " + ipNum + " " + _port + " " + _file.length());
-
-                    // The client may now connect to us and download the file.
-                    _socket = ss.accept();
-                    _socket.setSoTimeout(30000);
-                    _startTime = System.currentTimeMillis();
-
-                    // No longer possible to resume this transfer once it's underway.
-                    if (allowResume) {
-                        _manager.removeAwaitingResume(DccFileTransfer.this);
-                    }
-
-                    // Might as well close the server socket now; it's finished with.
-                    ss.close();
-
-                    BufferedOutputStream output = new BufferedOutputStream(_socket.getOutputStream());
-                    BufferedInputStream input = new BufferedInputStream(_socket.getInputStream());
-                    finput = new BufferedInputStream(new FileInputStream(_file));
-
-                    // Check for resuming.
-                    if (_progress > 0) {
-                        long bytesSkipped = 0;
-                        while (bytesSkipped < _progress) {
-                            bytesSkipped += finput.skip(_progress - bytesSkipped);
-                        }
-                    }
-
-                    byte[] outBuffer = new byte[BUFFER_SIZE];
-                    byte[] inBuffer = new byte[4];
-                    int bytesRead = 0;
-                    while ((bytesRead = finput.read(outBuffer, 0, outBuffer.length)) != -1) {
-                        output.write(outBuffer, 0, bytesRead);
-                        output.flush();
-                        input.read(inBuffer, 0, inBuffer.length);
-                        _progress += bytesRead;
-                        delay();
-                    }
+                    finput.close();
+                    _socket.close();
                 }
                 catch (Exception e) {
-                    exception = e;
+                    // Do nothing.
                 }
-                finally {
-                    try {
-                        finput.close();
-                        _socket.close();
-                    }
-                    catch (Exception e) {
-                        // Do nothing.
-                    }
-                }
-
-                _bot.getEventHandler().onFileTransferFinished(DccFileTransfer.this, exception);
             }
-        }.start();
+
+            _bot.getEventHandler().onFileTransferFinished(DccFileTransfer.this, exception);
+        }).start();
     }
 
 

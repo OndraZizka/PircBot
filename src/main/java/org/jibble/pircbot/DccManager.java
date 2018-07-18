@@ -107,11 +107,7 @@ public class DccManager {
 
             final DccChat chat = new DccChat(_bot, nick, login, hostname, address, port);
 
-            new Thread() {
-                public void run() {
-                    _bot.getEventHandler().onIncomingChatRequest(chat);
-                }
-            }.start();
+            new Thread(() -> _bot.getEventHandler().onIncomingChatRequest(chat)).start();
         }
         else {
             return false;
