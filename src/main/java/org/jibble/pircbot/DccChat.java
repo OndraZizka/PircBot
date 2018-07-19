@@ -17,7 +17,7 @@ import java.io.*;
 import org.jibble.pircbot.utils.Utils;
 
 /**
- * This class is used to allow the bot to interact with a DCC Chat session.
+ * This class is used to allow the pircBot to interact with a DCC Chat session.
  *
  * @since   0.9c
  * @author  Paul James Mutton,

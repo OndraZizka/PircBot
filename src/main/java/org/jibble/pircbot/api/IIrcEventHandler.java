@@ -35,7 +35,7 @@ public interface IIrcEventHandler {
      * the connection, then it may take a few minutes to detect (this is
      * commonly referred to as a "ping timeout").
      *  <p>
-     * If you wish to get your IRC bot to automatically rejoin a server after
+     * If you wish to get your IRC pircBot to automatically rejoin a server after
      * the connection has been lost, then this is probably the ideal method to
      * override to implement such functionality.
      *  <p>
@@ -45,10 +45,10 @@ public interface IIrcEventHandler {
     void onDisconnect();
 
 
-    
-    
-    
-    
+
+
+
+
     /**
      * This method is called when we receive a numeric response from the
      * IRC server.
@@ -655,7 +655,9 @@ public interface IIrcEventHandler {
 
 
     /**
-     * Called when a channel has moderated mode removed.
+     * Called when a channel is set to 'moderated' mode.  If a channel is
+     * moderated, then only users who have been 'voiced' or 'opped' may speak
+     * or change their nicks.
      *  <p>
      * This is a type of mode change and is also passed to the onMode
      * method in the PircBot class.
@@ -862,7 +864,7 @@ public interface IIrcEventHandler {
      * This method will be called whenever a DCC Chat request is received.
      * This means that a client has requested to chat to us directly rather
      * than via the IRC server. This is useful for sending many lines of text
-     * to and from the bot without having to worry about flooding the server
+     * to and from the pircBot without having to worry about flooding the server
      * or any operators of the server being able to "spy" on what is being
      * said. This abstract implementation performs no action, which means
      * that all DCC CHAT requests will be ignored by default.
@@ -870,9 +872,9 @@ public interface IIrcEventHandler {
      * If you wish to accept the connection, then you may override this
      * method and call the accept() method on the DccChat object, which
      * connects to the sender of the chat request and allows lines to be
-     * sent to and from the bot.
+     * sent to and from the pircBot.
      *  <p>
-     * Your bot must be able to connect directly to the user that sent the
+     * Your pircBot must be able to connect directly to the user that sent the
      * request.
      *  <p>
      * Example:

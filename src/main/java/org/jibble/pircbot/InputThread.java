@@ -15,6 +15,8 @@ package org.jibble.pircbot;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+
+import org.jibble.pircbot.handlers.OnDisconnectEventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -142,7 +144,7 @@ public class InputThread extends Thread {
         if (!_disposed) {
             log.debug("*** Disconnected.");
             _isConnected = false;
-            _bot.getEventHandler().onDisconnect();
+            new OnDisconnectEventHandler().execute();
         }
 
     }

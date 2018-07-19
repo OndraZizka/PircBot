@@ -12,6 +12,8 @@ package org.jibble.pircbot;
 
 import java.net.*;
 import java.io.*;
+
+import org.jibble.pircbot.handlers.OnFileTransferFinishedEventHandler;
 import org.jibble.pircbot.utils.Utils;
 
 /**
@@ -157,7 +159,7 @@ public class DccFileTransfer {
                 }
             }
 
-            _bot.getEventHandler().onFileTransferFinished(DccFileTransfer.this, exception);
+            new OnFileTransferFinishedEventHandler(_bot, DccFileTransfer.this, exception).execute();
         }).start();
     }
 
@@ -267,7 +269,7 @@ public class DccFileTransfer {
                 }
             }
 
-            _bot.getEventHandler().onFileTransferFinished(DccFileTransfer.this, exception);
+            new OnFileTransferFinishedEventHandler(_bot,DccFileTransfer.this,exception).execute();
         }).start();
     }
 
