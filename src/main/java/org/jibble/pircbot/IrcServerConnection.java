@@ -9,6 +9,7 @@
 */
 package org.jibble.pircbot;
 
+import org.jibble.pircbot.api.IIrcEventHandlerBase;
 import org.jibble.pircbot.beans.ReplyConstants;
 import org.jibble.pircbot.beans.ConnectionSettings;
 import org.jibble.pircbot.beans.User;
@@ -19,8 +20,8 @@ import java.net.*;
 import java.util.*;
 import javax.net.*;
 import javax.net.ssl.*;
-import org.jibble.pircbot.api.IIrcEventHandler;
-import org.jibble.pircbot.handlers.IrcProtocolEventHandler;
+
+import org.jibble.pircbot.handlers.*;
 import org.jibble.pircbot.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,23 +76,13 @@ public class IrcServerConnection implements ReplyConstants {
     
 
     // IRC event handler.
-    private IIrcEventHandler eventHandler;
+    private IIrcEventHandlerBase eventHandler;
 
-    public IIrcEventHandler getEventHandler() { return eventHandler; }
-    public void setEventHandler( IIrcEventHandler eventHandler ) { this.eventHandler = eventHandler; }
-
-
-    /**
-     * Constructs a PircBot with the default settings.  Your own constructors
-     * in classes which extend the PircBot abstract class should be responsible
-     * for changing the default settings if required.
-     */
-    public IrcServerConnection() {
-        this.eventHandler = new IrcProtocolEventHandler( this ); // Carefuly - uninitialized this.
-    }
+    public IIrcEventHandlerBase getEventHandler() { return eventHandler; }
+    public void setEventHandler( IIrcEventHandlerBase eventHandler ) { this.eventHandler = eventHandler; }
 
 
-    /**
+       /**
      * Attempt to connect to the specified IRC server.
      * The onConnect method is called upon success.
      *
@@ -277,7 +268,7 @@ public class IrcServerConnection implements ReplyConstants {
             _outputThread.start();
         }
 
-        this.eventHandler.onConnect();
+        new OnConnectEventHandler(this).execute();
     }
 
 
@@ -538,7 +529,7 @@ public class IrcServerConnection implements ReplyConstants {
 
 
     /**
-     * Attempt to change the current nick (nickname) of the bot when it
+     * Attempt to change the current nick (nickname) of the pircBot when it
      * is connected to an IRC server.
      * After confirmation of a successful nick change, the getNick method
      * will return the new nick.
@@ -551,13 +542,13 @@ public class IrcServerConnection implements ReplyConstants {
 
 
     /**
-     * Identify the bot with NickServ, supplying the appropriate password.
+     * Identify the pircBot with NickServ, supplying the appropriate password.
      * Some IRC Networks (such as freenode) require users to <i>register</i> and
      * <i>identify</i> with NickServ before they are able to send private messages
      * to other users, thus reducing the amount of spam.  If you are using
      * an IRC network where this kind of policy is enforced, you will need
-     * to make your bot <i>identify</i> itself to NickServ before you can send
-     * private messages. Assuming you have already registered your bot's
+     * to make your pircBot <i>identify</i> itself to NickServ before you can send
+     * private messages. Assuming you have already registered your pircBot's
      * nick with NickServ, this method can be used to <i>identify</i> with
      * the supplied password. It usually makes sense to identify with NickServ
      * immediately after connecting to a server.
@@ -582,8 +573,8 @@ public class IrcServerConnection implements ReplyConstants {
     /**
      * Set the mode of a channel.
      * This method attempts to set the mode of a channel.  This
-     * may require the bot to have operator status on the channel.
-     * For example, if the bot has operator status, we can grant
+     * may require the pircBot to have operator status on the channel.
+     * For example, if the pircBot has operator status, we can grant
      * operator status to "Dave" on the #cs channel
      * by calling setMode("#cs", "+o Dave");
      * An alternative way of doing this would be to use the op method.
@@ -601,7 +592,7 @@ public class IrcServerConnection implements ReplyConstants {
 
     /**
      * Sends an invitation to join a channel.  Some channels can be marked
-     * as "invite-only", so it may be useful to allow a bot to invite people
+     * as "invite-only", so it may be useful to allow a pircBot to invite people
      * into it.
      *
      * @param nick    The nick of the user to invite
@@ -617,7 +608,7 @@ public class IrcServerConnection implements ReplyConstants {
      * Bans a user from a channel.  An example of a valid hostmask is
      * "*!*compu@*.18hp.net".  This may be used in conjunction with the
      * kick method to permanently remove a user from a channel.
-     * Successful use of this method may require the bot to have operator
+     * Successful use of this method may require the pircBot to have operator
      * status itself.
      *
      * @param channel The channel to ban the user from.
@@ -631,7 +622,7 @@ public class IrcServerConnection implements ReplyConstants {
     /**
      * Unbans a user from a channel.  An example of a valid hostmask is
      * "*!*compu@*.18hp.net".
-     * Successful use of this method may require the bot to have operator
+     * Successful use of this method may require the pircBot to have operator
      * status itself.
      *
      * @param channel The channel to unban the user from.
@@ -644,7 +635,7 @@ public class IrcServerConnection implements ReplyConstants {
 
     /**
      * Grants operator privilidges to a user on a channel.
-     * Successful use of this method may require the bot to have operator
+     * Successful use of this method may require the pircBot to have operator
      * status itself.
      *
      * @param channel The channel we're opping the user on.
@@ -657,7 +648,7 @@ public class IrcServerConnection implements ReplyConstants {
 
     /**
      * Removes operator privilidges from a user on a channel.
-     * Successful use of this method may require the bot to have operator
+     * Successful use of this method may require the pircBot to have operator
      * status itself.
      *
      * @param channel The channel we're deopping the user on.
@@ -670,7 +661,7 @@ public class IrcServerConnection implements ReplyConstants {
 
     /**
      * Grants voice privilidges to a user on a channel.
-     * Successful use of this method may require the bot to have operator
+     * Successful use of this method may require the pircBot to have operator
      * status itself.
      *
      * @param channel The channel we're voicing the user on.
@@ -683,7 +674,7 @@ public class IrcServerConnection implements ReplyConstants {
 
     /**
      * Removes voice privilidges from a user on a channel.
-     * Successful use of this method may require the bot to have operator
+     * Successful use of this method may require the pircBot to have operator
      * status itself.
      *
      * @param channel The channel we're devoicing the user on.
@@ -697,7 +688,7 @@ public class IrcServerConnection implements ReplyConstants {
     /**
      * Set the topic for a channel.
      * This method attempts to set the topic of a channel.  This
-     * may require the bot to have operator status if the topic
+     * may require the pircBot to have operator status if the topic
      * is protected.
      *
      * @param channel The channel on which to perform the mode change.
@@ -712,7 +703,7 @@ public class IrcServerConnection implements ReplyConstants {
     /**
      * Kicks a user from a channel.
      * This method attempts to kick a user from a channel and
-     * may require the bot to have operator status in the channel.
+     * may require the pircBot to have operator status in the channel.
      *
      * @param channel The channel to kick the user from.
      * @param nick    The nick of the user to kick.
@@ -725,7 +716,7 @@ public class IrcServerConnection implements ReplyConstants {
     /**
      * Kicks a user from a channel, giving a reason.
      * This method attempts to kick a user from a channel and
-     * may require the bot to have operator status in the channel.
+     * may require the pircBot to have operator status in the channel.
      *
      * @param channel The channel to kick the user from.
      * @param nick    The nick of the user to kick.
@@ -777,7 +768,7 @@ public class IrcServerConnection implements ReplyConstants {
 
     /**
      * Sends a file to another user.  Resuming is supported.
-     * The other user must be able to connect directly to your bot to be
+     * The other user must be able to connect directly to your pircBot to be
      * able to receive the file.
      *  <p>
      * You may throttle the speed of this file transfer by calling the
@@ -920,7 +911,7 @@ public class IrcServerConnection implements ReplyConstants {
         // Check for server pings.
         if (line.startsWith("PING ")) {
             // Respond to the ping and return immediately.
-            this.eventHandler.onServerPing(line.substring(5));
+            new OnServerPingEventHandler(this,line.substring(5)).execute();
             return;
         }
 
@@ -971,7 +962,7 @@ public class IrcServerConnection implements ReplyConstants {
                 }
                 else {
                     // We don't know what this line means.
-                    this.eventHandler.onUnknown(line);
+                    new OnUnknownEventHandler(line).execute();
                     // Return from the method;
                     return;
                 }
@@ -995,50 +986,51 @@ public class IrcServerConnection implements ReplyConstants {
             String request = line.substring(line.indexOf(":\u0001") + 2, line.length() - 1);
             if (request.equals("VERSION")) {
                 // VERSION request
-                this.eventHandler.onVersion(sourceNick, sourceLogin, sourceHostname, target);
+                new OnVersionEventHandler(this,sourceNick, sourceLogin, sourceHostname, target).execute();
+
             }
             else if (request.startsWith("ACTION ")) {
                 // ACTION request
-                this.eventHandler.onAction(sourceNick, sourceLogin, sourceHostname, target, request.substring(7));
+                new OnActionEventHandler(sourceNick, sourceLogin, sourceHostname, target, request.substring(7)).execute();
             }
             else if (request.startsWith("PING ")) {
                 // PING request
-                this.eventHandler.onPing(sourceNick, sourceLogin, sourceHostname, target, request.substring(5));
+                new OnPingEventHandler(this,sourceNick,request.substring(5)).execute();
             }
             else if (request.equals("TIME")) {
                 // TIME request
-                this.eventHandler.onTime(sourceNick, sourceLogin, sourceHostname, target);
+                new OnTimeEventHandler(this, sourceNick,sourceLogin,sourceHostname,target,null).execute();
             }
             else if (request.equals("FINGER")) {
                 // FINGER request
-                this.eventHandler.onFinger(sourceNick, sourceLogin, sourceHostname, target);
+                new OnFingerEventHandler(this,sourceNick, sourceLogin, sourceHostname, target,null).execute();
             }
             else if ((tokenizer = new StringTokenizer(request)).countTokens() >= 5 && tokenizer.nextToken().equals("DCC")) {
                 // This is a DCC request.
                 boolean success = _dccManager.processRequest(sourceNick, sourceLogin, sourceHostname, request);
                 if (!success) {
                     // The DccManager didn't know what to do with the line.
-                    this.eventHandler.onUnknown(line);
+                    new OnUnknownEventHandler(line).execute();
                 }
             }
             else {
                 // An unknown CTCP message - ignore it.
-                this.eventHandler.onUnknown(line);
+                new OnUnknownEventHandler(line).execute();
             }
         }
         else if (command.equals("PRIVMSG") && _channelPrefixes.indexOf(target.charAt(0)) >= 0) {
             // This is a normal message to a channel.
-            this.eventHandler.onMessage(target, sourceNick, sourceLogin, sourceHostname, line.substring(line.indexOf(" :") + 2));
+            new OnMessageEventHandler(this,target,sourceNick,sourceLogin,sourceHostname,line.substring(line.indexOf(" :") + 2)).execute();
         }
         else if (command.equals("PRIVMSG")) {
             // This is a private message to us.
-            this.eventHandler.onPrivateMessage(sourceNick, sourceLogin, sourceHostname, line.substring(line.indexOf(" :") + 2));
+            new OnPrivateMessageEventHandler(this,sourceNick, sourceLogin, sourceHostname, null, line.substring(line.indexOf(" :") + 2)).execute();
         }
         else if (command.equals("JOIN")) {
             // Someone is joining a channel.
             String channel = target;
             this.addUser(channel, new User("", sourceNick));
-            this.eventHandler.onJoin(channel, sourceNick, sourceLogin, sourceHostname);
+            new OnJoinEventHandler(this,channel,sourceNick,sourceLogin,sourceHostname,null).execute();
         }
         else if (command.equals("PART")) {
             // Someone is parting from a channel.
@@ -1046,7 +1038,7 @@ public class IrcServerConnection implements ReplyConstants {
             if (sourceNick.equals(this.getNick())) {
                 this.removeChannel(target);
             }
-            this.eventHandler.onPart(target, sourceNick, sourceLogin, sourceHostname);
+            new OnPartEventHandler(this,target,sourceNick,sourceLogin,sourceHostname,null).execute();
         }
         else if (command.equals("NICK")) {
             // Somebody is changing their nick.
@@ -1056,11 +1048,11 @@ public class IrcServerConnection implements ReplyConstants {
                 // Update our nick if it was us that changed nick.
                 this.setNick(newNick);
             }
-            this.eventHandler.onNickChange(sourceNick, sourceLogin, sourceHostname, newNick);
+            new OnNickChangeEventHandler(this,null,sourceNick,sourceLogin,sourceHostname,newNick).execute();
         }
         else if (command.equals("NOTICE")) {
             // Someone is sending a notice.
-            this.eventHandler.onNotice(sourceNick, sourceLogin, sourceHostname, target, line.substring(line.indexOf(" :") + 2));
+            new OnNoticeEventHandler(this,null, sourceNick,sourceLogin,target,line.substring(line.indexOf(" :") + 2)).execute();
         }
         else if (command.equals("QUIT")) {
             // Someone has quit from the IRC server.
@@ -1070,7 +1062,7 @@ public class IrcServerConnection implements ReplyConstants {
             else {
                 this.removeUser(sourceNick);
             }
-            this.eventHandler.onQuit(sourceNick, sourceLogin, sourceHostname, line.substring(line.indexOf(" :") + 2));
+            new OnQuitEventHandler(this,null,sourceNick,sourceLogin,sourceHostname,line.substring(line.indexOf(" :") + 2)).execute();
         }
         else if (command.equals("KICK")) {
             // Somebody has been kicked from a channel.
@@ -1079,7 +1071,7 @@ public class IrcServerConnection implements ReplyConstants {
                 this.removeChannel(target);
             }
             this.removeUser(target, recipient);
-            this.eventHandler.onKick(target, sourceNick, sourceLogin, sourceHostname, recipient, line.substring(line.indexOf(" :") + 2));
+            new OnKickEventHandler(this, target, sourceNick, sourceLogin, sourceHostname, recipient, line.substring(line.indexOf(" :") + 2)).execute();
         }
         else if (command.equals("MODE")) {
             // Somebody is changing the mode on a channel or user.
@@ -1091,16 +1083,16 @@ public class IrcServerConnection implements ReplyConstants {
         }
         else if (command.equals("TOPIC")) {
             // Someone is changing the topic.
-            this.eventHandler.onTopic(target, line.substring(line.indexOf(" :") + 2), sourceNick, System.currentTimeMillis(), true);
+            new OnTopicEventHandler(this, target, line.substring(line.indexOf(" :") + 2), sourceNick, System.currentTimeMillis(), true).execute();
         }
         else if (command.equals("INVITE")) {
             // Somebody is inviting somebody else into a channel.
-            this.eventHandler.onInvite(target, sourceNick, sourceLogin, sourceHostname, line.substring(line.indexOf(" :") + 2));
+            new OnInviteEventHandler(this, target, sourceNick, sourceLogin, sourceHostname, line.substring(line.indexOf(" :") + 2)).execute();
         }
         else {
             // If we reach this point, then we've found something that the PircBot
             // Doesn't currently deal with.
-            this.eventHandler.onUnknown(line);
+            new OnUnknownEventHandler(line).execute();
         }
 
     }
@@ -1136,7 +1128,8 @@ public class IrcServerConnection implements ReplyConstants {
                 // Stick with the value of zero.
             }
             String topic = response.substring(colon + 1);
-            this.eventHandler.onChannelInfo(channel, userCount, topic);
+            new OnChannelInfoEventHandler(this,channel,userCount,topic).execute();
+
         }
         else if (code == RPL_TOPIC) {
             // This is topic information about a channel we've just joined.
@@ -1149,7 +1142,7 @@ public class IrcServerConnection implements ReplyConstants {
             _topics.put(channel, topic);
 
             // For backwards compatibility only - this onTopic method is deprecated.
-            this.eventHandler.onTopic(channel, topic);
+            new OnTopicEventHandler(this,channel,topic).execute();
         }
         else if (code == RPL_TOPICINFO) {
             StringTokenizer tokenizer = new StringTokenizer(response);
@@ -1167,7 +1160,7 @@ public class IrcServerConnection implements ReplyConstants {
             String topic = (String) _topics.get(channel);
             _topics.remove(channel);
 
-            this.eventHandler.onTopic(channel, topic, setBy, date, false);
+            new OnTopicEventHandler(this,channel,topic,setBy,date,false).execute();
         }
         else if (code == RPL_NAMREPLY) {
             // This is a list of nicks in a channel that we've just joined.
@@ -1199,10 +1192,10 @@ public class IrcServerConnection implements ReplyConstants {
             // the full list of users in the channel that we just joined.
             String channel = response.substring(response.indexOf(' ') + 1, response.indexOf(" :"));
             User[] users = this.getUsers(channel);
-            this.eventHandler.onUserList(channel, users);
+            new OnUserListEventHandler(this,channel,users).execute();
         }
 
-        this.eventHandler.onServerResponse(code, response);
+        new OnServerResponseEventHandler(this,code,response).execute();
     }
 
 
@@ -1249,108 +1242,109 @@ public class IrcServerConnection implements ReplyConstants {
                 else if (atPos == 'o') {
                    if (pn == '+') {
                        this.updateUser(channel, OP_ADD, params[p]);
-                       this.eventHandler.onOp(channel, sourceNick, sourceLogin, sourceHostname, params[p]);
+                       new OnOpEventHandler(this, channel, sourceNick, sourceLogin, sourceHostname, params[p]).execute();
                    }
                    else {
                        this.updateUser(channel, OP_REMOVE, params[p]);
-                       this.eventHandler.onDeop(channel, sourceNick, sourceLogin, sourceHostname, params[p]);
+                       new OnDeopEventHandler(this,channel, sourceNick, sourceLogin, sourceHostname, params[p]).execute();
                    }
                    p++;
                 }
                 else if (atPos == 'v') {
                     if (pn == '+') {
                         this.updateUser(channel, VOICE_ADD, params[p]);
-                        this.eventHandler.onVoice(channel, sourceNick, sourceLogin, sourceHostname, params[p]);
+                        new OnVoiceEventHandler(this, channel, sourceNick, sourceLogin, sourceHostname, params[p]).execute();
                     }
                     else {
                         this.updateUser(channel, VOICE_REMOVE, params[p]);
-                        this.eventHandler.onDeVoice(channel, sourceNick, sourceLogin, sourceHostname, params[p]);
+                        new OnDeVoiceEventHandler(this,channel,sourceNick,sourceLogin,sourceHostname,params[p]).execute();
                     }
                     p++;
                  }
                  else if (atPos == 'k') {
                      if (pn == '+') {
-                         this.eventHandler.onSetChannelKey(channel, sourceNick, sourceLogin, sourceHostname, params[p]);
+                         new OnSetChannelKeyEventHandler(this,channel, sourceNick,sourceLogin,sourceHostname,params[p]).execute();
                      }
                      else {
-                         this.eventHandler.onRemoveChannelKey(channel, sourceNick, sourceLogin, sourceHostname, params[p]);
+                         new OnRemoveChannelKeyEventHandler(this,channel, sourceNick, sourceLogin, sourceHostname, params[p]).execute();
                      }
                      p++;
                  }
                  else if (atPos == 'l') {
                      if (pn == '+') {
-                         this.eventHandler.onSetChannelLimit(channel, sourceNick, sourceLogin, sourceHostname, Integer.parseInt(params[p]));
+                         new OnSetChannelLimitEventHandler(this,channel,sourceNick,sourceLogin,sourceHostname,Integer.parseInt(params[p])).execute();
                          p++;
                      }
                      else {
-                         this.eventHandler.onRemoveChannelLimit(channel, sourceNick, sourceLogin, sourceHostname);
+                         new OnRemoveChannelLimitEventHandler(this, channel, sourceNick, sourceLogin, sourceHostname).execute();
                      }
                  }
                  else if (atPos == 'b') {
                      if (pn == '+') {
-                         this.eventHandler.onSetChannelBan(channel, sourceNick, sourceLogin, sourceHostname,params[p]);
+                         new OnSetChannelBanEventHandler(this,channel,sourceNick,sourceLogin,sourceHostname,params[p]).execute();
                      }
                      else {
-                         this.eventHandler.onRemoveChannelBan(channel, sourceNick, sourceLogin, sourceHostname, params[p]);
+                         new OnRemoveChannelBanEventHandler(this,channel,sourceNick,sourceLogin,sourceHostname,params[p]).execute();
                      }
                      p++;
                  }
                  else if (atPos == 't') {
                      if (pn == '+') {
-                         this.eventHandler.onSetTopicProtection(channel, sourceNick, sourceLogin, sourceHostname);
+
+                          new OnSetTopicProtectionEventHandler(this,null,sourceNick,sourceLogin,sourceHostname,null ).execute();
                      }
                      else {
-                         this.eventHandler.onRemoveTopicProtection(channel, sourceNick, sourceLogin, sourceHostname);
+                         new OnRemoveTopicProtectionEventHandler(this,channel,sourceNick,sourceLogin,sourceHostname,null).execute();
                      }
                  }
                  else if (atPos == 'n') {
                      if (pn == '+') {
-                         this.eventHandler.onSetNoExternalMessages(channel, sourceNick, sourceLogin, sourceHostname);
+                         new OnSetNoExternalMessagesEventHandler(this,channel,sourceNick,sourceLogin,sourceHostname,null).execute();
                      }
                      else {
-                         this.eventHandler.onRemoveNoExternalMessages(channel, sourceNick, sourceLogin, sourceHostname);
+                         new OnRemoveNoExternalMessagesEventHandler(this,channel,sourceNick,sourceLogin,sourceHostname,null).execute();
                      }
                  }
                  else if (atPos == 'i') {
                      if (pn == '+') {
-                         this.eventHandler.onSetInviteOnly(channel, sourceNick, sourceLogin, sourceHostname);
+                         new OnSetInviteOnlyEventHandler(this,channel,sourceLogin,sourceLogin,sourceHostname,null).execute();
                      }
                      else {
-                         this.eventHandler.onRemoveInviteOnly(channel, sourceNick, sourceLogin, sourceHostname);
+                         new OnRemoveInviteOnlyEventHandler(this,channel,sourceNick,sourceLogin,sourceHostname, null).execute();
                      }
                  }
                  else if (atPos == 'm') {
                      if (pn == '+') {
-                         this.eventHandler.onSetModerated(channel, sourceNick, sourceLogin, sourceHostname);
+                         new OnSetModeratedEventHandler(this,channel,sourceNick,sourceLogin,sourceHostname,null).execute();
                      }
                      else {
-                         this.eventHandler.onRemoveModerated(channel, sourceNick, sourceLogin, sourceHostname);
+                         new OnRemoveModeratedEventHandler(this,channel,sourceNick,sourceLogin,sourceHostname,null).execute();
                      }
                  }
                  else if (atPos == 'p') {
                      if (pn == '+') {
-                         this.eventHandler.onSetPrivate(channel, sourceNick, sourceLogin, sourceHostname);
+                         new OnSetPrivateEventHandler(this, channel, sourceNick, sourceLogin, sourceHostname, null).execute();
                      }
                      else {
-                         this.eventHandler.onRemovePrivate(channel, sourceNick, sourceLogin, sourceHostname);
+                         new OnRemovePrivateEventHandler(this,channel,sourceNick,sourceLogin,sourceHostname,null).execute();
                      }
                  }
                  else if (atPos == 's') {
                      if (pn == '+') {
-                         this.eventHandler.onSetSecret(channel, sourceNick, sourceLogin, sourceHostname);
+                         new OnSetSecretEventHandler(this,channel,sourceNick,sourceLogin,sourceHostname,null).execute();
                      }
                      else {
-                         this.eventHandler.onRemoveSecret(channel, sourceNick, sourceLogin, sourceHostname);
+                         new OnRemoveSecretEventHandler(this,channel,sourceNick,sourceLogin,null,null).execute();
                      }
                  }
             }
 
-            this.eventHandler.onMode(channel, sourceNick, sourceLogin, sourceHostname, mode);
+            new OnModeEventHandler(this,channel,sourceNick,sourceLogin,sourceHostname,mode).execute();
         }
         else {
             // The mode of a user is being changed.
             String nick = target;
-            this.eventHandler.onUserMode(nick, sourceNick, sourceLogin, sourceHostname, mode);
+            new OnUserModeEventHandler(this,nick,sourceNick,sourceLogin,sourceHostname,mode).execute();
         }
     }
 
@@ -1371,7 +1365,7 @@ public class IrcServerConnection implements ReplyConstants {
 
 
     /**
-     * Sets the name of the bot, which will be used as its nick when it
+     * Sets the name of the pircBot, which will be used as its nick when it
      * tries to join an IRC server.  This should be set before joining
      * any servers, otherwise the default nick will be used.  You would
      * typically call this method from the constructor of the class that
@@ -1389,7 +1383,7 @@ public class IrcServerConnection implements ReplyConstants {
 
 
     /**
-     * Sets the internal nick of the bot.  This is only to be called by the
+     * Sets the internal nick of the pircBot.  This is only to be called by the
      * PircBot class in response to notification of nick changes that apply
      * to us.
      *
@@ -1474,7 +1468,7 @@ public class IrcServerConnection implements ReplyConstants {
 
 
     /**
-     * Returns the current nick of the bot. Note that if you have just changed
+     * Returns the current nick of the pircBot. Note that if you have just changed
      * your nick, this method will still return the old nick until confirmation
      * of the nick change is received from the server.
      *  <p>
@@ -1483,7 +1477,7 @@ public class IrcServerConnection implements ReplyConstants {
      *
      * @since PircBot 1.0.0
      *
-     * @return The current nick of the bot.
+     * @return The current nick of the pircBot.
      */
     public String getNick() {
         return _nick;
@@ -1558,7 +1552,7 @@ public class IrcServerConnection implements ReplyConstants {
      * messages when there are multiple messages waiting in the
      * outgoing message queue.  This has a default value of 1000ms.
      * It is a good idea to stick to this default value, as it will
-     * prevent your bot from spamming servers and facing the subsequent
+     * prevent your pircBot from spamming servers and facing the subsequent
      * wrath!  However, if you do need to change this delay value (<b>not
      * recommended</b>), then this is the method to use.
      *
@@ -1735,7 +1729,7 @@ public class IrcServerConnection implements ReplyConstants {
 
     /**
      * Sets the InetAddress to be used when sending DCC chat or file transfers.
-     * This can be very useful when you are running a bot on a machine which
+     * This can be very useful when you are running a pircBot on a machine which
      * is behind a firewall and you need to tell receiving clients to connect
      * to a NAT/router, which then forwards the connection.
      *
@@ -1811,7 +1805,7 @@ public class IrcServerConnection implements ReplyConstants {
     /**
      * Returns true if and only if the object being compared is the exact
      * same instance as this PircBot. This may be useful if you are writing
-     * a multiple server IRC bot that uses more than one instance of PircBot.
+     * a multiple server IRC pircBot that uses more than one instance of PircBot.
      *
      * @since PircBot 0.9.9
      *
@@ -1885,7 +1879,7 @@ public class IrcServerConnection implements ReplyConstants {
      *  <li>This method will return immediately, as it does not require any
      *      interaction with the IRC server.
      *  </li>
-     *  <li>The bot must be in a channel to be able to know which users are
+     *  <li>The pircBot must be in a channel to be able to know which users are
      *      in it.
      *  </li>
      * </ul>
@@ -2159,7 +2153,7 @@ public class IrcServerConnection implements ReplyConstants {
     private String _username = "PircBot";
     private String _realname = "PircBot";
     private String _version = "PircBot " + VERSION + " Java IRC Bot - www.jibble.org";
-    private String _finger = "You ought to be arrested for fingering a bot!";
+    private String _finger = "You ought to be arrested for fingering a pircBot!";
 
     private String _channelPrefixes = "#&+!";
 }

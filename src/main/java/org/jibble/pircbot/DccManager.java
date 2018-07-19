@@ -12,6 +12,9 @@ found at http://www.jibble.org/licenses/
 
 package org.jibble.pircbot;
 
+import org.jibble.pircbot.handlers.OnIncomingChatRequestEventHandler;
+import org.jibble.pircbot.handlers.OnIncomingFileTransferEventHandler;
+
 import java.util.*;
 
 /**
@@ -57,7 +60,7 @@ public class DccManager {
             }
 
             DccFileTransfer transfer = new DccFileTransfer(_bot, this, nick, login, hostname, type, filename, address, port, size);
-            _bot.getEventHandler().onIncomingFileTransfer(transfer);
+            new OnIncomingFileTransferEventHandler(_bot,transfer).execute();
 
         }
         else if (type.equals("RESUME")) {
@@ -107,11 +110,7 @@ public class DccManager {
 
             final DccChat chat = new DccChat(_bot, nick, login, hostname, address, port);
 
-            new Thread() {
-                public void run() {
-                    _bot.getEventHandler().onIncomingChatRequest(chat);
-                }
-            }.start();
+            new Thread(() -> new OnIncomingChatRequestEventHandler(_bot, chat).execute()).start();
         }
         else {
             return false;
